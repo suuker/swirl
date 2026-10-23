@@ -728,6 +728,15 @@ def ocr_tool(files, o):
     from .pdfedit import ocr
     return [ocr(f, language=o["language"]) for f in files]
 
+def _ocr_langs() -> tuple[str, ...]:
+    exe = tools.find("tesseract")
+    if not exe:
+        return ("eng",)
+    import subprocess
+    out = subprocess.run([exe, "--list-langs"], capture_output=True, text=True,
+                         env=tools.child_env()).stdout.splitlines()
+    langs = tuple(l.strip() for l in out[1:] if l.strip() and l.strip() != "osd")
+    return langs or ("eng",)
 
 # ── Registry ──────────────────────────────────────────────────
 
@@ -801,8 +810,8 @@ TOOLS: list[Tool] = [
         Option("fallback", "Include text lines when a page has no table", "bool", False)]),
     Tool("pdf2md", "PDF to Markdown", "Clean text with headings and tables, ready for notes or AI.", "From PDF", PDF, pdf_to_markdown),
     Tool("pdfa", "PDF to PDF/A", "Archive-safe PDF/A-2b for long-term storage.", "From PDF", PDF, pdf_to_pdfa, needs=("soffice",)),
-    Tool("ocr", "OCR PDF", "Make scanned PDFs searchable and selectable.", "Optimize", PDF, ocr_tool, [
-        Option("language", "Language", "choice", "eng", ("eng", "urd", "ara", "fra", "deu", "spa", "hin"),
+        Tool("ocr", "OCR PDF", "Make scanned PDFs searchable and selectable.", "Optimize", PDF, ocr_tool, [
+        Option("language", "Language", "choice", "eng", _ocr_langs(),
                hint="Extra languages need their Tesseract language pack")], needs=("tesseract",)),
     Tool("pdf2txt", "PDF to text", "Extract all the text.", "From PDF", PDF, pdf_to_text),
     Tool("pdfimages", "Extract images", "Save every image inside the PDF.", "From PDF", PDF, extract_images),
